@@ -1,10 +1,10 @@
 const cW = 400, cH = 600;
 const strokeW = 10;
-const barLen = 40;
+const barLen = 60;
 const barSpeed = 6;
 
-let ballYSpeed = 3;
-let ballXSpeed = 5;
+let ballYSpeed = 1;
+let ballXSpeed = 3;
 
 const MAX_ABS_SPEED = 5;
 
@@ -186,22 +186,30 @@ function checkGameEnd() {
         DETECT_TRAECTORY_TRAIN_TEMP_STRUCT = {};
       }
 
-      if (DETECT_TRAECTORY_TRAIN_SEQ.length == 500) {
+      if (DETECT_TRAECTORY_TRAIN_SEQ.length == 200) {
         noLoop();
 
         saveJSON({
           width: cW,
           height: cH,
           data: DETECT_TRAECTORY_TRAIN_SEQ
-        }, `${cW}-${cH}-500.json`);
+        }, `${cW}-${cH}-200.json`);
       }
     }
 
-    // ballXSpeed = random(-1, 1) < 0 ? random(-3, -7) : random(3, 7);
-    // ballYSpeed = random(-1, 1) < 0 ? random(-3, -7) : random(3, 7);
+    if (collectDetectingData) {
+      ballXSpeed = random(-1, 1) < 0 ? random([-1, -2, -3, -4, -5]) : random([1, 2, 3, 4, 5]);
+      // collect only vectors towards player1
+      ballYSpeed = random([-1, -2, -3, -4, -5]);
+    }
 
     ball.left = random(strokeW + abs(ballXSpeed), cW - strokeW - ball.width - abs(ballXSpeed));
-    ball.top = cH / 2 - strokeW / 2;
+
+    if (!collectDetectingData) {
+      ball.top = cH / 2 - strokeW / 2;
+    } else {
+      ball.top = random(strokeW + abs(ballYSpeed), cH - strokeW - ball.width - abs(ballYSpeed));
+    }
 
     DETECT_TRAECTORY_TRAIN_TEMP_STRUCT = {
       ballXSpeed,
@@ -268,20 +276,47 @@ function correctBallSpeedIfCollision() {
     ballXSpeed = -ballXSpeed;
   }
 
+  const player1BarIntersected = rectsIntersected(player1BarRect, ballRect)
+  const player2BarIntersected = rectsIntersected(player2BarRect, ballRect)
+
+  const idealPlayerBarIntersected = rectsIntersected(trainBarRect, ballRect)
+
   if (
-    rectsIntersected(
-      player2BarRect,
-      ballRect
-    ) ||
-    (!collectDetectingData && rectsIntersected(
-      player1BarRect,
-      ballRect
-    )) ||
-    (collectDetectingData && rectsIntersected(
-      trainBarRect,
-      ballRect
-    ))
+    player2BarIntersected ||
+    (!collectDetectingData && player1BarIntersected) ||
+    (collectDetectingData && idealPlayerBarIntersected)
   ) {
+
+    // change speed if hit by borders
+    if (player2BarIntersected && (
+      abs(player2.left - ball.left) < strokeW) ||
+      abs(player2.left + player2.width - ball.left) < strokeW
+    ) {
+      ballYSpeed = ballYSpeed < 0 ? ballYSpeed - 2 : ballYSpeed + 2;
+    } else if (player2BarIntersected) {
+      // calm down if hit by center
+      ballYSpeed = ballYSpeed < 0 ? ballYSpeed + 1 : ballYSpeed - 1;
+    }
+
+    // same for player1
+    if (player1BarIntersected && (
+      abs(player1.left - ball.left) < strokeW) ||
+      abs(player1.left + player1.width - ball.left) < strokeW
+    ) {
+      ballYSpeed = ballYSpeed < 0 ? ballYSpeed - 2 : ballYSpeed + 2;
+    } else if (player1BarIntersected) {
+      // calm down if hit by center
+      ballYSpeed = ballYSpeed < 0 ? ballYSpeed + 1 : ballYSpeed - 1;
+    }
+
+    if (abs(ballYSpeed) < 1) {
+      ballYSpeed = ballYSpeed < 0 ? -1 : 1;
+    }
+
+    if (abs(ballYSpeed) > 5) {
+      ballYSpeed = ballYSpeed < 0 ? -5 : 5;
+    }
+
     ballYSpeed = -ballYSpeed;
 
     if (ball.top <= strokeW) {
