@@ -1,6 +1,6 @@
-const cW = 400, cH = 600;
+const cW = 200, cH = 400;
 const strokeW = 10;
-const barLen = 60;
+const barLen = 30;
 const barSpeed = 6;
 
 let ballYSpeed = 1;
